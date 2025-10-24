@@ -1,6 +1,7 @@
 #ifndef CLOCKSYNC_TIMEWINDOW_HPP
 #define CLOCKSYNC_TIMEWINDOW_HPP
 
+#include <numeric>
 #include <vector>
 #include <optional>
 #include <algorithm>
@@ -176,6 +177,7 @@ struct TimeWindow {
     }
   }
 
+  bool empty() const { return m_samples.empty(); }
   auto cbegin() const { return m_samples.cbegin(); }
   auto cend() const { return m_samples.cend(); }
   size_t size() const { return m_samples.size(); }

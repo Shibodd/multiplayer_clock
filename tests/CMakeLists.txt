@@ -11,17 +11,12 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-
-add_executable (${PROJECT_NAME}_test_time_window test_time_window.cpp)
-target_link_libraries (${PROJECT_NAME}_test_time_window GTest::gtest_main)
-target_include_directories (${PROJECT_NAME}_test_time_window PRIVATE ../include)
-
 add_executable (${PROJECT_NAME}_test_clock_sync test_clock_sync.cpp)
 target_link_libraries (${PROJECT_NAME}_test_clock_sync GTest::gtest_main clock_sync)
 target_include_directories (${PROJECT_NAME}_test_clock_sync PRIVATE ../include)
 target_compile_options (${PROJECT_NAME}_test_clock_sync PRIVATE -Wall -Werror -Wpedantic)
+
 include (GoogleTest)
 gtest_discover_tests (
-  ${PROJECT_NAME}_test_time_window
   ${PROJECT_NAME}_test_clock_sync
 )

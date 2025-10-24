@@ -20,7 +20,7 @@ TEST(ClockSyncTest, BasicExchange) {
   constexpr unsigned char OUR_MID0 = 0;
   constexpr unsigned char THEIR_MID0 = 0;
 
-  ClockSync clk(OUR_ID, 100s, 8, &std::cerr);
+  ClockSync clk(OUR_ID, 1000s, 12, 10s, &std::cerr);
 
   /* PERIOD 0
   No information known by either peer
@@ -29,17 +29,18 @@ TEST(ClockSyncTest, BasicExchange) {
   // We send at T0 + OUR_PHASE
   std::cout << "tx0" << std::endl;
   {
-    auto tx_msg = clk.on_message_tx();
+    auto now = OUR_T0 + OUR_PHASE;
+    auto tx_msg = clk.on_message_tx(now);
     EXPECT_FALSE(tx_msg.prev_tx_stamp().has_value());
     EXPECT_EQ(tx_msg.message_id(), OUR_MID0);
     EXPECT_TRUE(tx_msg.peers().empty());
-    clk.store_tx_timestamp(OUR_T0 + OUR_PHASE);
+    clk.store_tx_timestamp(now);
   }
 
   // They send at T0
   std::cout << "rx0" << std::endl;
   clk.on_message_rx({ THEIR_ID, THEIR_MID0, std::nullopt }, OUR_T0 + DELAY);
-  EXPECT_FALSE(clk.get_offset(THEIR_ID).has_value());
+  EXPECT_FALSE(clk.get_offset(THEIR_ID, OUR_T0 + DELAY).has_value());
 
   /* PERIOD 1
   Peers have information about previous messages,
@@ -50,7 +51,8 @@ TEST(ClockSyncTest, BasicExchange) {
   // We send at T0 + OUR_PHASE + PERIOD
   std::cout << "tx1" << std::endl;
   {
-    auto tx_msg = clk.on_message_tx();
+    auto now = OUR_T0 + OUR_PHASE + PERIOD;
+    auto tx_msg = clk.on_message_tx(now);
     ASSERT_TRUE(tx_msg.prev_tx_stamp().has_value());
     EXPECT_EQ(*tx_msg.prev_tx_stamp(), OUR_T0 + OUR_PHASE);
     EXPECT_EQ(tx_msg.message_id(), OUR_MID0 + 1);
@@ -58,7 +60,7 @@ TEST(ClockSyncTest, BasicExchange) {
     ASSERT_FALSE(tx_msg.peers().empty());
     EXPECT_EQ(tx_msg.peers().front().id(), THEIR_ID);
     EXPECT_FALSE(tx_msg.peers().front().min_rx_delay().has_value());
-    clk.store_tx_timestamp(OUR_T0 + OUR_PHASE + PERIOD);
+    clk.store_tx_timestamp(now);
   }
   
   // They send at T0 + PERIOD
@@ -69,7 +71,7 @@ TEST(ClockSyncTest, BasicExchange) {
     rx_msg.peers().emplace_back(OUR_ID, std::nullopt);
     clk.on_message_rx(rx_msg, OUR_T0 + PERIOD + DELAY);
   }
-  EXPECT_FALSE(clk.get_offset(THEIR_ID).has_value());
+  EXPECT_FALSE(clk.get_offset(THEIR_ID, OUR_T0 + PERIOD + DELAY).has_value());
 
   /* PERIOD 2
   Peers get to know each other's rx delay and the offset becomes available.
@@ -78,7 +80,8 @@ TEST(ClockSyncTest, BasicExchange) {
 
   std::cout << "tx2" << std::endl;
   {
-    auto tx_msg = clk.on_message_tx();
+    auto now = OUR_T0 + OUR_PHASE + 2 * PERIOD;
+    auto tx_msg = clk.on_message_tx(now);
     ASSERT_TRUE(tx_msg.prev_tx_stamp().has_value());
     EXPECT_EQ(*tx_msg.prev_tx_stamp(), OUR_T0 + OUR_PHASE + PERIOD);
     EXPECT_EQ(tx_msg.message_id(), OUR_MID0 + 2);
@@ -86,7 +89,7 @@ TEST(ClockSyncTest, BasicExchange) {
     EXPECT_EQ(tx_msg.peers().front().id(), THEIR_ID);
     ASSERT_TRUE(tx_msg.peers().front().min_rx_delay().has_value());
     EXPECT_EQ(tx_msg.peers().front().min_rx_delay()->count(), (DELAY-CLOCK_OFFSET).count());
-    clk.store_tx_timestamp(OUR_T0 + OUR_PHASE + 2 * PERIOD);
+    clk.store_tx_timestamp(now);
   }
 
   std::cout << "rx2" << std::endl;

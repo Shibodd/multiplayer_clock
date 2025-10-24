@@ -43,7 +43,7 @@ enum class TimestampSource {
 
 struct RxMessage {
   std::string_view data {};
-  std::chrono::nanoseconds timestamp { 0 };
+  std::chrono::system_clock::time_point timestamp { decltype(timestamp)::duration(0) };
   TimestampSource timestamp_source { TimestampSource::None };
   bool truncated = false;
 };
@@ -142,7 +142,6 @@ struct MulticastSocket {
       RxMessage ans;
       ans.data = std::string_view(buffer, sz);
 
-      std::cout << "Received " << sz << std::endl;
       ans.truncated = msgh.msg_flags;
       if (msgh.msg_flags & MSG_CTRUNC) {
         print_error(std::cerr, "msg with truncated control!!");
@@ -160,10 +159,12 @@ struct MulticastSocket {
       }
 
       if (rx_time != nullptr) {
-        ans.timestamp = std::chrono::seconds(rx_time->tv_sec) + std::chrono::nanoseconds(rx_time->tv_nsec);
+        ans.timestamp = std::chrono::system_clock::time_point(
+          std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(rx_time->tv_sec) + std::chrono::nanoseconds(rx_time->tv_nsec))
+        );
         ans.timestamp_source = TimestampSource::Software;
       } else {
-        ans.timestamp = std::chrono::system_clock::now().time_since_epoch();
+        ans.timestamp = std::chrono::system_clock::now();
         ans.timestamp_source = TimestampSource::Wall;
       }
 
@@ -184,8 +185,11 @@ private:
 static bool run = true;
 
 int main(int argc, char* argv[]) {
+  unsigned char OUR_ID = std::stoi(argv[1]);
+  unsigned char THEIR_ID = std::stoi(argv[2]);
+
   MulticastSocket sock("239.1.2.3", 7423);
-  ClockSync clock_sync(argv[1][0], std::chrono::seconds(1), 50);
+  ClockSync clock_sync(OUR_ID, std::chrono::seconds(1), 16, std::chrono::seconds(20));
 
   auto tx = std::thread([&sock, &clock_sync]() {
     std::array<char, 512> buffer;
@@ -198,7 +202,7 @@ int main(int argc, char* argv[]) {
       os.clear();
       os.seekp(0, std::ios::beg);
 
-      ClockSyncMessage msg = clock_sync.on_message_tx();
+      ClockSyncMessage msg = clock_sync.on_message_tx(std::chrono::system_clock::now());
       ar(msg);
 
       if (not os.good()) {
@@ -209,12 +213,10 @@ int main(int argc, char* argv[]) {
       auto pos = os.tellp();
       sock.send(std::string_view(buffer.data(), pos), tx_timestamp);
       clock_sync.store_tx_timestamp(tx_timestamp);
-      std::cout << "Sent " << pos << std::endl;
-
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   });
-  auto rx = std::thread([&sock, &clock_sync, &argv]() {
+  auto rx = std::thread([&sock, &clock_sync, &THEIR_ID]() {
     std::array<char, 512> buffer;
 
     while (run) {
@@ -231,15 +233,15 @@ int main(int argc, char* argv[]) {
         boost::iostreams::array_source source(buffer.data(), buffer.size());
         boost::iostreams::stream is(source);
         cereal::BinaryInputArchive archive(is);
-        ClockSyncMessage msg;
-        archive(msg);
+        ClockSyncMessage csyn_msg;
+        archive(csyn_msg);
 
-        clock_sync.on_message_rx(msg, rx_timestamp);
+        clock_sync.on_message_rx(csyn_msg, msg->timestamp);
       } else {
         std::cerr << "rcvtimeo" << std::endl;
       }
 
-      if (auto off = clock_sync.get_offset(argv[2][0])) {
+      if (auto off = clock_sync.get_offset(THEIR_ID, std::chrono::system_clock::now())) {
         std::cout << "Offset: " << off->count() << std::endl;
       }
     }

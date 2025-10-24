@@ -17,15 +17,16 @@ struct ClockSync {
   struct Peer {
     unsigned char prev_rx_message_id;
     ClockOffsetCalculator::Timepoint prev_rx_timestamp;
-    ClockOffsetCalculator rx_diff_window; 
+    ClockOffsetCalculator calculator; 
 
     Peer(unsigned char rx_message_id,
-         ClockOffsetCalculator::Duration window_duration,
-         size_t window_capacity,
-         ClockOffsetCalculator::Timepoint prev_rx_ts)
+         ClockOffsetCalculator::Timepoint prev_rx_ts,
+         ClockOffsetCalculator::Duration max_age,
+         size_t history_capacity,
+         std::chrono::duration<double> time_constant)
       : prev_rx_message_id(rx_message_id),
         prev_rx_timestamp(prev_rx_ts),
-        rx_diff_window(window_duration, window_capacity)
+        calculator(history_capacity, max_age, time_constant)
     {}
   };
 
@@ -46,7 +47,7 @@ struct ClockSync {
       peer_it = m_peers.emplace_hint(peer_it,
         std::piecewise_construct,
         std::forward_as_tuple(msg.player_id()),
-        std::forward_as_tuple(msg.message_id(), m_window_duration, m_window_capacity, rx_timestamp)
+        std::forward_as_tuple(msg.message_id(), rx_timestamp, m_calculator_max_age, m_calculator_history_capacity, m_calculator_time_constant)
       );
     } else {
       // Use the information about the previous message
@@ -63,20 +64,19 @@ struct ClockSync {
 
           if (msg.prev_tx_stamp().has_value()) {
             auto val = *(msg.prev_tx_stamp());
-            peer_it->second.rx_diff_window.on_message_rx_delay(
+            peer_it->second.calculator.on_our_rx_delay(
               peer_it->second.prev_rx_timestamp,
               val
             );
 
             CLSYN_LOG(m_log, "Peer prev_tx_stamp is " << val.time_since_epoch().count());
-            CLSYN_LOG(m_log, "New window size " << peer_it->second.rx_diff_window.window_size());
           } else {
             CLSYN_LOG(m_log, "Peer has no prev_tx_stamp");
           }
 
           if (peer_part_it->min_rx_delay().has_value()) {
             auto val = *(peer_part_it->min_rx_delay());
-            peer_it->second.rx_diff_window.on_their_min_rx_delay(rx_timestamp, val);
+            peer_it->second.calculator.on_their_rx_delay(rx_timestamp, val);
             CLSYN_LOG(m_log, "Peer min_rx_delay is " << val.count());
           } else {
             CLSYN_LOG(m_log, "Peer has no min_rx_delay");
@@ -93,12 +93,12 @@ struct ClockSync {
     }
   }
 
-  ClockSyncMessage on_message_tx() {
+  ClockSyncMessage on_message_tx(std::chrono::system_clock::time_point now) {
     std::lock_guard lk(m_mtx);
 
     ClockSyncMessage msg(m_player_id, m_message_id, m_prev_tx_stamp);
     for (const auto& peer : m_peers) {
-      msg.peers().push_back(PeerMessagePart(peer.first, peer.second.rx_diff_window.get_min_rx_delay()));
+      msg.peers().push_back(PeerMessagePart(peer.first, peer.second.calculator.get_rx_delay(now)));
     }
     CLSYN_LOG(m_log, "Sending message " << m_message_id);
     ++m_message_id;
@@ -111,7 +111,7 @@ struct ClockSync {
     CLSYN_LOG(m_log, "Storing tx timestamp " << tx_timestamp.time_since_epoch().count());
   }
 
-  std::optional<ClockOffsetCalculator::Duration> get_offset(unsigned char other_player_id, std::chrono::system_clock::time_point now = std::chrono::system_clock::now()) {
+  std::optional<ClockOffsetCalculator::Duration> get_offset(unsigned char other_player_id, std::chrono::system_clock::time_point now) {
     std::lock_guard lk(m_mtx);
     
     auto pos = m_peers.find(other_player_id);
@@ -120,7 +120,7 @@ struct ClockSync {
       return std::nullopt;
     }
 
-    auto ans = pos->second.rx_diff_window.clock_offset(now);
+    auto ans = pos->second.calculator.clock_offset(now);
     if (ans) {
       CLSYN_LOG(m_log, "Offset query answered with " << ans->count());
     } else {
@@ -130,12 +130,13 @@ struct ClockSync {
     return ans;
   }
 
-  ClockSync(unsigned char player_id, ClockOffsetCalculator::Duration window_duration, size_t window_capacity, std::ostream* log = nullptr) 
+  ClockSync(unsigned char player_id, ClockOffsetCalculator::Duration calculator_max_age, size_t calculator_history_capacity, std::chrono::duration<double> calculator_time_constant, std::ostream* log = nullptr) 
     : m_message_id(0),
       m_player_id(player_id),
       m_log(log),
-      m_window_duration(window_duration),
-      m_window_capacity(window_capacity)
+      m_calculator_max_age(calculator_max_age),
+      m_calculator_history_capacity(calculator_history_capacity),
+      m_calculator_time_constant(calculator_time_constant)
   {}
 
 private:
@@ -149,8 +150,9 @@ private:
 
   std::ostream* m_log;
 
-  ClockOffsetCalculator::Duration m_window_duration;
-  size_t m_window_capacity;
+  ClockOffsetCalculator::Duration m_calculator_max_age;
+  size_t m_calculator_history_capacity;
+  std::chrono::duration<double> m_calculator_time_constant;
 };
 
 #endif // !CLOCKSYNC_CLOCKSYNC_HPP
