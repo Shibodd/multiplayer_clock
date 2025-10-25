@@ -93,7 +93,7 @@ void ClockSync::on_message_rx(const ClockSyncMessage& msg, ClockOffsetCalculator
         CLSYN_LOG("Peer has no information about us");
       }
     } else {
-      CLSYN_LOG("Message ID jump, not using message" << msg.player_id());
+      CLSYN_LOG("Message ID jump, not using message");
     }
     
     peer_it->second.m_prev_rx_msg_id = msg.message_id();
@@ -110,7 +110,7 @@ ClockSyncMessage ClockSync::on_message_tx(std::chrono::system_clock::time_point 
   for (const auto& peer : m_peers) {
     msg.peers().push_back(PeerMessagePart(peer.first, peer.second.m_calculator.get_rx_delay(now)));
   }
-  CLSYN_LOG("Sending message " << m_message_id);
+  CLSYN_LOG("Sending message " << static_cast<int>(m_message_id));
   ++m_message_id;
 
   return msg;
@@ -126,7 +126,7 @@ std::optional<ClockOffsetCalculator::Duration> ClockSync::get_offset(unsigned ch
   
   auto pos = m_peers.find(other_player_id);
   if (pos == m_peers.end()) {
-    CLSYN_LOG("Offset queried for unknown peer " << other_player_id);
+    CLSYN_LOG("Offset queried for unknown peer " << static_cast<int>(other_player_id));
     return std::nullopt;
   }
 
