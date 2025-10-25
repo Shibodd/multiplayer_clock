@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
     OUR_ID,
     std::chrono::seconds(30),
     50,
-    std::chrono::seconds(30),
+    std::chrono::seconds(10),
     nullptr,
     LOG_DIR
   );
@@ -215,11 +215,6 @@ int main(int argc, char* argv[]) {
       ClockSyncMessage msg = clock_sync.on_message_tx(std::chrono::system_clock::now());
       ar(msg);
 
-      if (not os.good()) {
-        std::cerr << "bad ostream" << std::endl;
-        exit(1);
-      }
-
       auto pos = os.tellp();
       sock.send(std::string_view(buffer.data(), pos), tx_timestamp);
       clock_sync.store_tx_timestamp(tx_timestamp);
@@ -233,18 +228,24 @@ int main(int argc, char* argv[]) {
       ClockOffsetCalculator::Timepoint rx_timestamp;
 
       std::optional<RxMessage> msg = sock.receive(buffer.data(), buffer.size());
-
+      
       if (msg.has_value()) {
         if (msg->timestamp_source != TimestampSource::Software) {
           std::cerr << "bad stamp" << std::endl;
           exit(1);
         }
 
-        boost::iostreams::array_source source(buffer.data(), buffer.size());
+        boost::iostreams::array_source source(msg->data.data(), msg->data.size());
         boost::iostreams::stream is(source);
         cereal::BinaryInputArchive archive(is);
         ClockSyncMessage csyn_msg;
-        archive(csyn_msg);
+
+        try {
+          archive(csyn_msg);
+        } catch (const cereal::Exception& ex) {
+          std::cerr << "Failed to parse incoming message: " << ex.what() << ". Discarding it!";
+          continue;
+        }
 
         clock_sync.on_message_rx(csyn_msg, msg->timestamp);
       } else {
@@ -252,7 +253,7 @@ int main(int argc, char* argv[]) {
       }
 
       if (auto off = clock_sync.get_offset(THEIR_ID, std::chrono::system_clock::now())) {
-        std::cout << "Offset: " << off->count() << std::endl;
+        std::cout << "Offset (us): " << std::chrono::duration_cast<std::chrono::microseconds>(*off).count() << std::endl;
       }
     }
   });
