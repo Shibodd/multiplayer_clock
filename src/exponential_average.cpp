@@ -49,16 +49,13 @@ void ExponentialAverage::push(const ExponentialAverage::Measurement& z) {
   size_t min_num_samples = m_init_window.capacity();
 
   if (std::distance(begin, end) >= min_num_samples) {
-    std::chrono::duration<double> value = std::accumulate(
-      begin, end, std::chrono::duration<double>{},
-      [min_num_samples](const std::chrono::duration<double>& acc, const ExponentialAverage::Measurement& sample) {
-        return acc + std::chrono::duration<double>(sample.value) / static_cast<double>(min_num_samples);
-      }
-    );
+    auto sample = *std::min_element(begin, end, [](const ExponentialAverage::Measurement& a, ExponentialAverage::Measurement& b) {
+      return a.value < b.value;
+    });
 
     m_state.emplace(
       z.timestamp,
-      std::chrono::duration_cast<Duration>(value)
+      sample.value
     );
   }
 }
