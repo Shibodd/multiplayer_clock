@@ -256,8 +256,9 @@ int main(int argc, char* argv[]) {
         std::cerr << "rcvtimeo" << std::endl;
       }
 
-      if (auto off = clock_sync.get_offset(THEIR_ID, std::chrono::system_clock::now())) {
-        std::cout << "Offset (us): " << std::chrono::duration_cast<std::chrono::microseconds>(*off).count() << std::endl;
+      auto now = std::chrono::system_clock::now();
+      if (auto off = clock_sync.get_offset(THEIR_ID, now)) {
+        std::cout << now.time_since_epoch().count() << ',' << std::chrono::duration_cast<std::chrono::microseconds>(*off).count() << '\n';
       }
     }
   });
