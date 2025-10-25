@@ -52,6 +52,7 @@ private:
   Duration m_max_age;
   ExponentialAverage m_rx_delay;
   std::optional<utils::Sample<Timepoint, Duration>> m_tx_delay;
+  std::optional<Duration> m_min_rx_delay;
 };
 
 

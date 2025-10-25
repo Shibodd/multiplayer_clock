@@ -21,6 +21,11 @@ ClockOffsetCalculator::ClockOffsetCalculator(Duration max_age, size_t filter_min
 
 void ClockOffsetCalculator::on_our_rx_delay(Timepoint rx_stamp, Timepoint tx_stamp) {
   auto rx_delay = rx_stamp - tx_stamp;
+  if (m_min_rx_delay.has_value()) {
+    m_min_rx_delay = std::min(*m_min_rx_delay, rx_delay);
+  } else {
+    m_min_rx_delay = rx_delay;
+  }
   m_rx_delay.push(rx_stamp, rx_delay);
 
   if (m_rx_log != nullptr) {
@@ -48,6 +53,11 @@ void ClockOffsetCalculator::on_their_rx_delay(Timepoint rx_stamp, Duration min_t
 }
 
 std::optional<Duration> ClockOffsetCalculator::get_rx_delay(Timepoint now) const {
+  if (auto del = m_min_rx_delay) {
+    return *del;
+  }
+  return std::nullopt;
+
   if (auto state = m_rx_delay.state()) {
     if (now - state->timestamp <= m_max_age) {
       return state->value;
