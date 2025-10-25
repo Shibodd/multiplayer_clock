@@ -35,14 +35,23 @@ struct MeasurementWindow {
     }
     
     // Drop all expired measurements
-    return m_buffer.erase(m_buffer.begin(), begin);
+    return drop_before(begin);
+  }
+
+  void clear() {
+    m_buffer.clear();
   }
   
   iterator end() {
     return m_buffer.end();
   }
 
+  iterator drop_before(iterator new_begin) {
+    return m_buffer.erase(m_buffer.begin(), new_begin);
+  }
+
   std::size_t capacity() const { return m_buffer.capacity(); }
+  duration window_duration() const { return m_window_duration; }
 
   MeasurementWindow(std::size_t capacity, duration duration)
     : m_buffer(capacity), 

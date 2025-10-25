@@ -21,8 +21,11 @@ TEST(ClockSyncTest, BasicExchange) {
   // Start message ID
   constexpr unsigned char OUR_MID0 = 0;
   constexpr unsigned char THEIR_MID0 = 0;
-
-  ClockSync clk(OUR_ID, 1000s, 1, 0s, &std::cerr);
+  ClockOffsetCalculator::Filter::Params params;
+  params.window_size = 1;
+  params.chunk_size = 1;
+  params.duration = 2 * PERIOD;
+  ClockSync clk(OUR_ID, params, &std::cerr);
 
   /* PERIOD 0
   No information known by either peer

@@ -192,11 +192,15 @@ int main(int argc, char* argv[]) {
   const char* LOG_DIR = argv[3];
 
   MulticastSocket sock("239.1.2.3", 7423);
+
+  ClockOffsetCalculator::Filter::Params params;
+  params.window_size = 512;
+  params.chunk_size = 16;
+  params.duration = std::chrono::minutes(10);
+
   ClockSync clock_sync(
     OUR_ID,
-    std::chrono::seconds(30),
-    50,
-    std::chrono::minutes(1),
+    params,
     nullptr,
     LOG_DIR
   );

@@ -5,9 +5,9 @@ namespace clock_sync {
 using Timepoint = ClockOffsetCalculator::Timepoint;
 using Duration = ClockOffsetCalculator::Duration;
 
-ClockOffsetCalculator::ClockOffsetCalculator(Duration max_age, size_t filter_min_samples, std::chrono::duration<double> filter_time_constant, std::ostream* rx_log, std::ostream* tx_log)
-  : m_max_age(max_age),
-    m_rx_delay(filter_min_samples, max_age, filter_time_constant),
+ClockOffsetCalculator::ClockOffsetCalculator(const typename ClockOffsetCalculator::Filter::Params& filter_params, std::ostream* rx_log, std::ostream* tx_log)
+  : m_max_age(filter_params.duration),
+    m_rx_delay(filter_params),
     m_rx_log(rx_log),
     m_tx_log(tx_log)
 {
@@ -29,7 +29,7 @@ void ClockOffsetCalculator::on_our_rx_delay(Timepoint rx_stamp, Timepoint tx_sta
       << tx_stamp.time_since_epoch().count() << ','
       << rx_delay.count() << ',';
 
-    if (auto state = m_rx_delay.state()) {
+    if (auto state = m_rx_delay.minimum()) {
       (*m_rx_log) << state->value.count();
     } else {
       (*m_rx_log) << "-1";
@@ -47,8 +47,8 @@ void ClockOffsetCalculator::on_their_rx_delay(Timepoint rx_stamp, Duration min_t
   }
 }
 
-std::optional<Duration> ClockOffsetCalculator::get_rx_delay(Timepoint now) const {
-  if (auto state = m_rx_delay.state()) {
+std::optional<Duration> ClockOffsetCalculator::get_rx_delay(Timepoint now) {
+  if (auto state = m_rx_delay.minimum()) {
     if (now - state->timestamp <= m_max_age) {
       return state->value;
     }
@@ -65,7 +65,7 @@ std::optional<Duration> ClockOffsetCalculator::get_tx_delay(Timepoint now) const
   return std::nullopt;
 }
 
-std::optional<Duration> ClockOffsetCalculator::clock_offset(Timepoint now) const {
+std::optional<Duration> ClockOffsetCalculator::clock_offset(Timepoint now) {
   auto min_rx_delay = get_rx_delay(now);
   auto min_tx_delay = get_tx_delay(now);
 

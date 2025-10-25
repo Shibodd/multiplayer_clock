@@ -18,13 +18,11 @@ ClockSync::Peer::Peer(
       player_id_t id,
       message_id_t rx_message_id,
       ClockOffsetCalculator::Timepoint prev_rx_ts,
-      ClockOffsetCalculator::Duration max_age,
-      std::size_t filter_min_samples,
-      std::chrono::duration<double> filter_time_constant,
+      const ClockOffsetCalculator::Filter::Params& filter_params,
       const std::filesystem::path& log_directory)
   : m_prev_rx_msg_id(rx_message_id),
     m_prev_rx_timestamp(prev_rx_ts),
-    m_calculator(max_age, filter_min_samples, filter_time_constant)
+    m_calculator(filter_params)
 {
   if (not log_directory.empty()) {
     auto filename = std::to_string(id) + ".csv";
@@ -55,7 +53,7 @@ void ClockSync::on_message_rx(const ClockSyncMessage& msg, ClockOffsetCalculator
     peer_it = m_peers.emplace_hint(peer_it,
       std::piecewise_construct,
       std::forward_as_tuple(msg.player_id()),
-      std::forward_as_tuple(msg.player_id(), msg.message_id(), rx_timestamp, m_calculator_max_age, m_calculator_min_samples, m_calculator_time_constant, m_log_directory)
+      std::forward_as_tuple(msg.player_id(), msg.message_id(), rx_timestamp, m_calculator_filter_params, m_log_directory)
     );
   } else {
     // Use the information about the previous message
@@ -104,10 +102,8 @@ void ClockSync::on_message_rx(const ClockSyncMessage& msg, ClockOffsetCalculator
 ClockSyncMessage ClockSync::on_message_tx(std::chrono::system_clock::time_point now) {
   std::lock_guard lk(m_mtx);
 
-  
-
   ClockSyncMessage msg(m_player_id, m_message_id, m_prev_tx_stamp);
-  for (const auto& peer : m_peers) {
+  for (auto& peer : m_peers) {
     msg.peers().push_back(PeerMessagePart(peer.first, peer.second.m_calculator.get_rx_delay(now)));
   }
   CLSYN_LOG("Sending message " << static_cast<int>(m_message_id));
@@ -140,14 +136,12 @@ std::optional<ClockOffsetCalculator::Duration> ClockSync::get_offset(unsigned ch
   return ans;
 }
 
-ClockSync::ClockSync(unsigned char player_id, ClockOffsetCalculator::Duration calculator_max_age, size_t calculator_min_samples, std::chrono::duration<double> calculator_time_constant, std::ostream* log, std::filesystem::path log_directory)
+ClockSync::ClockSync(unsigned char player_id, const ClockOffsetCalculator::Filter::Params& calculator_filter_params, std::ostream* log, std::filesystem::path log_directory)
   : m_message_id(0),
     m_player_id(player_id),
     m_log(log),
     m_log_directory(log_directory),
-    m_calculator_max_age(calculator_max_age),
-    m_calculator_min_samples(calculator_min_samples),
-    m_calculator_time_constant(calculator_time_constant)
+    m_calculator_filter_params(calculator_filter_params)
 {
   if (not m_log_directory.empty()) {
     std::filesystem::create_directory(m_log_directory);

@@ -6,15 +6,16 @@
 
 #include <clock_sync/types.hpp>
 #include <clock_sync/utils/sample.hpp>
-#include <clock_sync/exponential_average.hpp>
+#include <clock_sync/utils/window_minimum.hpp>
 
 namespace clock_sync {
 
 struct ClockOffsetCalculator {
   using Timepoint = std::chrono::system_clock::time_point;
   using Duration = Timepoint::duration;
+  using Filter = utils::WindowMinimum<Timepoint, Duration>;
 
-  ClockOffsetCalculator(Duration max_age, size_t filter_min_samples, std::chrono::duration<double> filter_time_constant, std::ostream* rx_log = nullptr, std::ostream* tx_log = nullptr);
+  ClockOffsetCalculator(const typename Filter::Params& filter_params, std::ostream* rx_log = nullptr, std::ostream* tx_log = nullptr);
 
   void set_rx_logger(std::ostream* rx_log) { m_rx_log = rx_log; }
   void set_tx_logger(std::ostream* tx_log) { m_tx_log = tx_log; }
@@ -34,7 +35,7 @@ struct ClockOffsetCalculator {
   /**
   @return our rx_delay
   */
-  std::optional<Duration> get_rx_delay(Timepoint now) const;
+  std::optional<Duration> get_rx_delay(Timepoint now);
 
   /**
   @return their rx_delay
@@ -44,13 +45,13 @@ struct ClockOffsetCalculator {
   /**
   @return clock offset "delta" s.t. their_t = our_t + delta
   */
-  std::optional<Duration> clock_offset(Timepoint now) const;
+  std::optional<Duration> clock_offset(Timepoint now);
 
 private:
   std::ostream* m_rx_log;
   std::ostream* m_tx_log;
   Duration m_max_age;
-  ExponentialAverage m_rx_delay;
+  Filter m_rx_delay;
   std::optional<utils::Sample<Timepoint, Duration>> m_tx_delay;
 };
 
