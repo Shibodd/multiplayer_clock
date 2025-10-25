@@ -27,7 +27,7 @@ void ExponentialAverage::push(const ExponentialAverage::Measurement& z) {
       // Compute exp average
       double dt_dbl = std::chrono::duration<double>(z.timestamp - m_state.timestamp).count();
       double alpha = 1.0;
-      if (m_time_constant > 1e9) {
+      if (m_time_constant > 1e-9) {
         alpha = std::min(dt_dbl / m_time_constant, 1.0);
       }
       double z_dbl = std::chrono::duration<double>(z.value).count();
