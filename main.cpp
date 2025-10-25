@@ -184,12 +184,22 @@ private:
 
 static bool run = true;
 
+using namespace clock_sync;
+
 int main(int argc, char* argv[]) {
   unsigned char OUR_ID = std::stoi(argv[1]);
   unsigned char THEIR_ID = std::stoi(argv[2]);
+  const char* LOG_DIR = argv[3];
 
   MulticastSocket sock("239.1.2.3", 7423);
-  ClockSync clock_sync(OUR_ID, std::chrono::seconds(1), 16, std::chrono::seconds(20));
+  ClockSync clock_sync(
+    OUR_ID,
+    std::chrono::seconds(30),
+    50,
+    std::chrono::seconds(30),
+    nullptr,
+    LOG_DIR
+  );
 
   auto tx = std::thread([&sock, &clock_sync]() {
     std::array<char, 512> buffer;

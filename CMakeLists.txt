@@ -8,7 +8,7 @@ add_library (clock_sync
 )
 target_include_directories (clock_sync PUBLIC include)
 
-# add_executable (${PROJECT_NAME} main.cpp)
-# target_link_libraries (${PROJECT_NAME} clock_sync)
+add_executable (${PROJECT_NAME} main.cpp)
+target_link_libraries (${PROJECT_NAME} clock_sync)
 
 add_subdirectory (tests)
