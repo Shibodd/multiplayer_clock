@@ -50,6 +50,7 @@ private:
 
   std::ostream* m_log;
   std::optional<std::ofstream> m_file_log;
+  std::optional<std::ofstream> m_offset_file_log;
   std::filesystem::path m_log_directory;
 
   ClockOffsetCalculator::Filter::Params m_calculator_filter_params;

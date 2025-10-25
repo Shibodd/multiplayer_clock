@@ -127,10 +127,18 @@ std::optional<ClockOffsetCalculator::Duration> ClockSync::get_offset(unsigned ch
   }
 
   auto ans = pos->second.m_calculator.clock_offset(now);
+  ClockOffsetCalculator::Duration::rep log_value = {};
+
   if (ans) {
+    log_value = ans->count();
     CLSYN_LOG("Offset query answered with " << ans->count());
   } else {
     CLSYN_LOG("Offset queried, but it's unknown");
+  }
+
+  if (m_offset_file_log) {
+    auto now_steady = std::chrono::steady_clock::now();
+    *m_offset_file_log << now.time_since_epoch().count() << ',' << now_steady.time_since_epoch().count() << ',' << log_value << '\n';
   }
   
   return ans;
@@ -146,6 +154,7 @@ ClockSync::ClockSync(unsigned char player_id, const ClockOffsetCalculator::Filte
   if (not m_log_directory.empty()) {
     std::filesystem::create_directory(m_log_directory);
     m_file_log.emplace(m_log_directory / "log.txt");
+    m_offset_file_log.emplace(m_log_directory / "offsets.csv");
   }
 }
 
