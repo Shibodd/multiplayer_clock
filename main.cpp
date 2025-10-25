@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
     OUR_ID,
     std::chrono::seconds(30),
     50,
-    std::chrono::seconds(10),
+    std::chrono::minutes(1),
     nullptr,
     LOG_DIR
   );
