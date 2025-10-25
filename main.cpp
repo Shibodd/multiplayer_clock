@@ -194,9 +194,9 @@ int main(int argc, char* argv[]) {
   MulticastSocket sock("239.1.2.3", 7423);
 
   ClockOffsetCalculator::Filter::Params params;
-  params.window_size = 512;
-  params.chunk_size = 16;
-  params.duration = std::chrono::minutes(10);
+  params.window_size = 110;
+  params.chunk_size = 5;
+  params.duration = std::chrono::seconds(10);
 
   ClockSync clock_sync(
     OUR_ID,
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
       auto pos = os.tellp();
       sock.send(std::string_view(buffer.data(), pos), tx_timestamp);
       clock_sync.store_tx_timestamp(tx_timestamp);
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
   });
   auto rx = std::thread([&sock, &clock_sync, &THEIR_ID]() {
