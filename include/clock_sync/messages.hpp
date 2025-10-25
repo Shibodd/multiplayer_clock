@@ -2,6 +2,8 @@
 #define CLOCKSYNC_MESSAGES_HPP
 
 #include <clock_sync/clock_offset_calculator.hpp>
+#include <clock_sync/types.hpp>
+
 #include <cereal/cereal.hpp>
 #include <boost/core/span.hpp>
 
@@ -9,7 +11,7 @@ namespace clock_sync {
 
 struct PeerMessagePart {
   PeerMessagePart() {}
-  PeerMessagePart(unsigned char id, std::optional<ClockOffsetCalculator::Duration> m_min_rx_delay)
+  PeerMessagePart(player_id_t id, std::optional<ClockOffsetCalculator::Duration> m_min_rx_delay)
     : m_id(id),
       m_min_rx_delay(m_min_rx_delay.has_value()? m_min_rx_delay->count() : 0)
   {}
@@ -20,7 +22,7 @@ struct PeerMessagePart {
     ar(m_min_rx_delay);
   }
 
-  unsigned char id() const { return m_id; }
+  player_id_t id() const { return m_id; }
   std::optional<ClockOffsetCalculator::Duration> min_rx_delay() const {
     if (m_min_rx_delay != 0) {
       return ClockOffsetCalculator::Duration(m_min_rx_delay);
@@ -30,15 +32,15 @@ struct PeerMessagePart {
   }
 
 private:
-  unsigned char m_id;
+  player_id_t m_id;
   ClockOffsetCalculator::Timepoint::rep m_min_rx_delay;
 };
 
 struct ClockSyncMessage {
   ClockSyncMessage() {}
   ClockSyncMessage(
-    unsigned char player_id,
-    unsigned char message_id,
+    player_id_t player_id,
+    message_id_t message_id,
     std::optional<ClockOffsetCalculator::Timepoint> prev_tx_stamp
   )
     : m_player_id(player_id),
@@ -53,19 +55,19 @@ struct ClockSyncMessage {
     ar(m_prev_tx_stamp);
 
     if (Archive::is_loading::value) {
-      unsigned char num_peers;
+      peer_len_t num_peers;
       ar(num_peers);
       m_peers.resize(num_peers);
     } else {
-      ar(static_cast<unsigned char>(m_peers.size()));
+      ar(static_cast<peer_len_t>(m_peers.size()));
     }
     for (auto& peer : m_peers) {
       ar(peer);
     }
   }
 
-  unsigned char player_id() const { return m_player_id; }
-  unsigned char message_id() const { return m_message_id; }
+  player_id_t player_id() const { return m_player_id; }
+  message_id_t message_id() const { return m_message_id; }
   std::optional<ClockOffsetCalculator::Timepoint> prev_tx_stamp() const {
     if (m_prev_tx_stamp > 0) {
       return ClockOffsetCalculator::Timepoint(
@@ -79,8 +81,8 @@ struct ClockSyncMessage {
   const std::vector<PeerMessagePart>& peers() const { return m_peers; }
 
 private:
-  unsigned char m_player_id;
-  unsigned char m_message_id;
+  player_id_t m_player_id;
+  message_id_t m_message_id;
   ClockOffsetCalculator::Timepoint::rep m_prev_tx_stamp;
   std::vector<PeerMessagePart> m_peers;
 };

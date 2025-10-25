@@ -5,18 +5,17 @@ namespace clock_sync {
 using Timepoint = ClockOffsetCalculator::Timepoint;
 using Duration = ClockOffsetCalculator::Duration;
 
-ClockOffsetCalculator::ClockOffsetCalculator(Duration max_age, size_t filter_min_samples, std::chrono::duration<double> filter_time_constant, std::optional<Logger> log)
+ClockOffsetCalculator::ClockOffsetCalculator(Duration max_age, size_t filter_min_samples, std::chrono::duration<double> filter_time_constant, std::ostream* rx_log, std::ostream* tx_log)
   : m_max_age(max_age),
     m_rx_delay(filter_min_samples, max_age, filter_time_constant),
-    m_log(log)
+    m_rx_log(rx_log),
+    m_tx_log(tx_log)
 {
-  if (m_log.has_value()) {
-    if (m_log->rx != nullptr) {
-      (*m_log->rx) << "rx_stamp,tx_stamp,rx_delay,rx_delay_filtered\n";
-    }
-    if (m_log->rx != nullptr) {
-      (*m_log->rx) << "rx_stamp,tx_delay\n";
-    }
+  if (m_rx_log != nullptr) {
+    (*m_rx_log) << "rx_stamp,tx_stamp,rx_delay,rx_delay_filtered\n";
+  }
+  if (m_rx_log != nullptr) {
+    (*m_rx_log) << "rx_stamp,tx_delay\n";
   }
 }
 
@@ -24,29 +23,27 @@ void ClockOffsetCalculator::on_our_rx_delay(Timepoint rx_stamp, Timepoint tx_sta
   auto rx_delay = rx_stamp - tx_stamp;
   m_rx_delay.push(rx_stamp, rx_delay);
 
-  if (m_log.has_value()) {
-    if (m_log->rx != nullptr) {
-      (*m_log->rx)
-        << rx_stamp.time_since_epoch().count() << ','
-        << tx_stamp.time_since_epoch().count() << ','
-        << rx_delay.count() << ',';
+  if (m_rx_log != nullptr) {
+    (*m_rx_log)
+      << rx_stamp.time_since_epoch().count() << ','
+      << tx_stamp.time_since_epoch().count() << ','
+      << rx_delay.count() << ',';
 
-      if (auto state = m_rx_delay.state()) {
-        (*m_log->rx) << state->value.count();
-      } else {
-        (*m_log->rx) << "-1";
-      }
-
-      (*m_log->rx) << '\n';
+    if (auto state = m_rx_delay.state()) {
+      (*m_rx_log) << state->value.count();
+    } else {
+      (*m_rx_log) << "-1";
     }
+
+    (*m_rx_log) << '\n';
   }
 }
 
 void ClockOffsetCalculator::on_their_rx_delay(Timepoint rx_stamp, Duration min_tx_delay) {
   m_tx_delay.emplace(rx_stamp, min_tx_delay);
 
-  if (m_log->tx != nullptr) {
-    (*m_log->tx) << rx_stamp.time_since_epoch().count() << ',' << min_tx_delay.count() << '\n';
+  if (m_tx_log != nullptr) {
+    (*m_tx_log) << rx_stamp.time_since_epoch().count() << ',' << min_tx_delay.count() << '\n';
   }
 }
 

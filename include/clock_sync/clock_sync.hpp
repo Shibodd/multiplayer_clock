@@ -4,6 +4,8 @@
 #include <mutex>
 #include <boost/container/flat_map.hpp>
 
+#include <fstream>
+#include <filesystem>
 #include <clock_sync/messages.hpp>
 #include <clock_sync/clock_offset_calculator.hpp>
 
@@ -11,16 +13,23 @@ namespace clock_sync {
 
 struct ClockSync {
   struct Peer {
-    unsigned char prev_rx_message_id;
-    ClockOffsetCalculator::Timepoint prev_rx_timestamp;
-    ClockOffsetCalculator calculator; 
+    player_id_t id;
+    message_id_t m_prev_rx_msg_id;
+    ClockOffsetCalculator::Timepoint m_prev_rx_timestamp;
+    ClockOffsetCalculator m_calculator;
+    struct LogFiles {
+      std::ofstream m_tx_log;
+      std::ofstream m_rx_log;
+    };
+    std::unique_ptr<LogFiles> m_logger;
 
-    Peer(unsigned char rx_message_id,
+    Peer(player_id_t id,
+         message_id_t rx_message_id,
          ClockOffsetCalculator::Timepoint prev_rx_ts,
          ClockOffsetCalculator::Duration max_age,
          size_t filter_min_samples,
          std::chrono::duration<double> filter_time_constant,
-         std::optional<ClockOffsetCalculator::Logger> log = std::nullopt);
+         const std::filesystem::path& log_directory = {});
   };
 
   void on_message_rx(const ClockSyncMessage& msg, ClockOffsetCalculator::Timepoint rx_timestamp);
@@ -29,23 +38,26 @@ struct ClockSync {
 
   void store_tx_timestamp(ClockOffsetCalculator::Timepoint tx_timestamp);
 
-  std::optional<ClockOffsetCalculator::Duration> get_offset(unsigned char other_player_id, std::chrono::system_clock::time_point now);
+  std::optional<ClockOffsetCalculator::Duration> get_offset(player_id_t other_player_id, std::chrono::system_clock::time_point now);
 
-  ClockSync(unsigned char player_id, ClockOffsetCalculator::Duration calculator_max_age, size_t calculator_min_samples, std::chrono::duration<double> calculator_time_constant, std::ostream* log = nullptr);
+  ClockSync(player_id_t player_id, ClockOffsetCalculator::Duration calculator_max_age, size_t calculator_min_samples, std::chrono::duration<double> calculator_time_constant, std::ostream* log = nullptr, std::filesystem::path log_directory = std::filesystem::path{});
 private:
   std::mutex m_mtx;
   std::vector<PeerMessagePart> m_peers_buffer;
   boost::container::flat_map<unsigned char, Peer> m_peers;
   
   std::optional<ClockOffsetCalculator::Timepoint> m_prev_tx_stamp;
-  unsigned short m_message_id;
-  unsigned char m_player_id;
+  message_id_t m_message_id;
+  player_id_t m_player_id;
 
   std::ostream* m_log;
+  std::optional<std::fstream> m_file_log;
+  std::filesystem::path m_log_directory;
 
   ClockOffsetCalculator::Duration m_calculator_max_age;
   size_t m_calculator_min_samples;
   std::chrono::duration<double> m_calculator_time_constant;
+
 };
 
   

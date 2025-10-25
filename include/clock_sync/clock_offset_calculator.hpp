@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iostream>
 
+#include <clock_sync/types.hpp>
 #include <clock_sync/utils/sample.hpp>
 #include <clock_sync/exponential_average.hpp>
 
@@ -13,15 +14,10 @@ struct ClockOffsetCalculator {
   using Timepoint = std::chrono::system_clock::time_point;
   using Duration = Timepoint::duration;
 
-  struct Logger {
-    std::ostream* rx;
-    std::ostream* tx;
-    unsigned int id;
-  };
+  ClockOffsetCalculator(Duration max_age, size_t filter_min_samples, std::chrono::duration<double> filter_time_constant, std::ostream* rx_log = nullptr, std::ostream* tx_log = nullptr);
 
-  ClockOffsetCalculator(Duration max_age, size_t filter_min_samples, std::chrono::duration<double> filter_time_constant, std::optional<Logger> log);
-
-  void set_logger(std::optional<Logger> log) { m_log = log; }
+  void set_rx_logger(std::ostream* rx_log) { m_rx_log = rx_log; }
+  void set_tx_logger(std::ostream* tx_log) { m_tx_log = tx_log; }
 
   /**
   @param rx_stamp our reception stamp for this message
@@ -51,7 +47,8 @@ struct ClockOffsetCalculator {
   std::optional<Duration> clock_offset(Timepoint now) const;
 
 private:
-  std::optional<Logger> m_log;
+  std::ostream* m_rx_log;
+  std::ostream* m_tx_log;
   Duration m_max_age;
   ExponentialAverage m_rx_delay;
   std::optional<utils::Sample<Timepoint, Duration>> m_tx_delay;
