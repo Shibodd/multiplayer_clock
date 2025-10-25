@@ -5,6 +5,8 @@
 #include <cereal/cereal.hpp>
 #include <boost/core/span.hpp>
 
+namespace clock_sync {
+
 struct PeerMessagePart {
   PeerMessagePart() {}
   PeerMessagePart(unsigned char id, std::optional<ClockOffsetCalculator::Duration> m_min_rx_delay)
@@ -82,5 +84,7 @@ private:
   ClockOffsetCalculator::Timepoint::rep m_prev_tx_stamp;
   std::vector<PeerMessagePart> m_peers;
 };
+
+} // namespace clock_sync
 
 #endif // !CLOCKSYNC_MESSAGES_HPP

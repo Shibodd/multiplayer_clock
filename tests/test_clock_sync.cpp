@@ -3,6 +3,8 @@
 
 using namespace std::chrono_literals;
 
+using namespace clock_sync;
+
 TEST(ClockSyncTest, BasicExchange) {
   constexpr unsigned char OUR_ID = 14;
   constexpr unsigned char THEIR_ID = 26;
@@ -11,7 +13,7 @@ TEST(ClockSyncTest, BasicExchange) {
   constexpr std::chrono::system_clock::duration PERIOD = 5s; // send period
   constexpr std::chrono::system_clock::duration DELAY = 3s; // comm delay
   constexpr std::chrono::system_clock::duration OUR_PHASE = 1s; // Start sending at OUR_T0 + OUR_PHASE 
-
+  
   // Clock time at the start
   constexpr std::chrono::system_clock::time_point OUR_T0 = std::chrono::system_clock::time_point(10s);
   constexpr std::chrono::system_clock::time_point THEIR_T0 = OUR_T0 + CLOCK_OFFSET;
@@ -20,7 +22,7 @@ TEST(ClockSyncTest, BasicExchange) {
   constexpr unsigned char OUR_MID0 = 0;
   constexpr unsigned char THEIR_MID0 = 0;
 
-  ClockSync clk(OUR_ID, 1000s, 12, 10s, &std::cerr);
+  ClockSync clk(OUR_ID, 1000s, 1, 0s, &std::cerr);
 
   /* PERIOD 0
   No information known by either peer
