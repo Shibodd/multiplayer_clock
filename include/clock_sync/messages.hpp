@@ -5,7 +5,6 @@
 #include <clock_sync/types.hpp>
 
 #include <cereal/cereal.hpp>
-#include <boost/core/span.hpp>
 
 namespace clock_sync {
 
