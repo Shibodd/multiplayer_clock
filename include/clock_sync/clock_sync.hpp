@@ -51,13 +51,12 @@ private:
   player_id_t m_player_id;
 
   std::ostream* m_log;
-  std::optional<std::fstream> m_file_log;
+  std::optional<std::ofstream> m_file_log;
   std::filesystem::path m_log_directory;
 
   ClockOffsetCalculator::Duration m_calculator_max_age;
   size_t m_calculator_min_samples;
   std::chrono::duration<double> m_calculator_time_constant;
-
 };
 
   
