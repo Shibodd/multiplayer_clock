@@ -39,12 +39,12 @@ TEST(ClockSyncTest, BasicExchange) {
     EXPECT_FALSE(tx_msg.prev_tx_stamp().has_value());
     EXPECT_EQ(tx_msg.message_id(), OUR_MID0);
     EXPECT_TRUE(tx_msg.peers().empty());
-    clk.store_tx_timestamp(now);
+    // clk.store_tx_timestamp(now);
   }
 
   // They send at T0
   std::cout << "rx0" << std::endl;
-  clk.on_message_rx({ THEIR_ID, THEIR_MID0, std::nullopt }, OUR_T0 + DELAY);
+  clk.on_message_rx({ THEIR_ID, THEIR_MID0 }, OUR_T0 + DELAY);
   EXPECT_FALSE(clk.get_offset(THEIR_ID, OUR_T0 + DELAY).has_value());
 
   /* PERIOD 1
@@ -58,14 +58,15 @@ TEST(ClockSyncTest, BasicExchange) {
   {
     auto now = OUR_T0 + OUR_PHASE + PERIOD;
     auto tx_msg = clk.on_message_tx(now);
-    ASSERT_TRUE(tx_msg.prev_tx_stamp().has_value());
-    EXPECT_EQ(*tx_msg.prev_tx_stamp(), OUR_T0 + OUR_PHASE);
+    // Has to be inserted outside now. ASSERT_TRUE(tx_msg.prev_tx_stamp().has_value());
+    // Has to be inserted outside now. EXPECT_EQ(*tx_msg.prev_tx_stamp(), OUR_T0 + OUR_PHASE);
+    EXPECT_FALSE(tx_msg.prev_tx_stamp().has_value());
     EXPECT_EQ(tx_msg.message_id(), OUR_MID0 + 1);
     // We now know about our peer, although we have no estimate for the rx delay.
     ASSERT_FALSE(tx_msg.peers().empty());
     EXPECT_EQ(tx_msg.peers().front().id(), THEIR_ID);
     EXPECT_FALSE(tx_msg.peers().front().min_rx_delay().has_value());
-    clk.store_tx_timestamp(now);
+    // clk.store_tx_timestamp(now);
   }
   
   // They send at T0 + PERIOD
@@ -87,14 +88,15 @@ TEST(ClockSyncTest, BasicExchange) {
   {
     auto now = OUR_T0 + OUR_PHASE + 2 * PERIOD;
     auto tx_msg = clk.on_message_tx(now);
-    ASSERT_TRUE(tx_msg.prev_tx_stamp().has_value());
-    EXPECT_EQ(*tx_msg.prev_tx_stamp(), OUR_T0 + OUR_PHASE + PERIOD);
+    // Has to be inserted outside now. ASSERT_TRUE(tx_msg.prev_tx_stamp().has_value());
+    // Has to be inserted outside now. EXPECT_EQ(*tx_msg.prev_tx_stamp(), OUR_T0 + OUR_PHASE + PERIOD);
+    EXPECT_FALSE(tx_msg.prev_tx_stamp().has_value());
     EXPECT_EQ(tx_msg.message_id(), OUR_MID0 + 2);
     ASSERT_FALSE(tx_msg.peers().empty());
     EXPECT_EQ(tx_msg.peers().front().id(), THEIR_ID);
     ASSERT_TRUE(tx_msg.peers().front().min_rx_delay().has_value());
     EXPECT_EQ(tx_msg.peers().front().min_rx_delay()->count(), (DELAY-CLOCK_OFFSET).count());
-    clk.store_tx_timestamp(now);
+    // clk.store_tx_timestamp(now);
   }
 
   std::cout << "rx2" << std::endl;

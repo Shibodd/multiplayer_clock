@@ -34,8 +34,6 @@ struct ClockSync {
 
   ClockSyncMessage on_message_tx(std::chrono::system_clock::time_point now);
 
-  void store_tx_timestamp(ClockOffsetCalculator::Timepoint tx_timestamp);
-
   std::optional<ClockOffsetCalculator::Duration> get_offset(player_id_t other_player_id, std::chrono::system_clock::time_point now);
 
   ClockSync(player_id_t player_id, const ClockOffsetCalculator::Filter::Params& calculator_filter_params, std::ostream* log = nullptr, std::filesystem::path log_directory = std::filesystem::path{});

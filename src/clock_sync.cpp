@@ -102,7 +102,7 @@ void ClockSync::on_message_rx(const ClockSyncMessage& msg, ClockOffsetCalculator
 ClockSyncMessage ClockSync::on_message_tx(std::chrono::system_clock::time_point now) {
   std::lock_guard lk(m_mtx);
 
-  ClockSyncMessage msg(m_player_id, m_message_id, m_prev_tx_stamp);
+  ClockSyncMessage msg(m_player_id, m_message_id);
   for (auto& peer : m_peers) {
     msg.peers().push_back(PeerMessagePart(peer.first, peer.second.m_calculator.get_rx_delay(now)));
   }
@@ -110,11 +110,6 @@ ClockSyncMessage ClockSync::on_message_tx(std::chrono::system_clock::time_point 
   ++m_message_id;
 
   return msg;
-}
-
-void ClockSync::store_tx_timestamp(ClockOffsetCalculator::Timepoint tx_timestamp) {
-  m_prev_tx_stamp = tx_timestamp;
-  CLSYN_LOG("Storing tx timestamp " << tx_timestamp.time_since_epoch().count());
 }
 
 std::optional<ClockOffsetCalculator::Duration> ClockSync::get_offset(unsigned char other_player_id, std::chrono::system_clock::time_point now) {

@@ -40,7 +40,7 @@ struct ClockSyncMessage {
   ClockSyncMessage(
     player_id_t player_id,
     message_id_t message_id,
-    std::optional<ClockOffsetCalculator::Timepoint> prev_tx_stamp
+    std::optional<ClockOffsetCalculator::Timepoint> prev_tx_stamp = std::nullopt
   )
     : m_player_id(player_id),
       m_message_id(message_id),
@@ -63,6 +63,10 @@ struct ClockSyncMessage {
     for (auto& peer : m_peers) {
       ar(peer);
     }
+  }
+  
+  void set_prev_tx_stamp(std::optional<ClockOffsetCalculator::Timepoint> stamp) {
+    m_prev_tx_stamp = stamp.has_value()? stamp->time_since_epoch().count() : 0;
   }
 
   player_id_t player_id() const { return m_player_id; }
