@@ -31,7 +31,7 @@ TheSocket::~TheSocket() {
   close(m_sock);
 }
 
-TheSocket::TheSocket(const char* multicast_iface_address, const char* const * addresses, size_t num_addresses, unsigned short port) {
+TheSocket::TheSocket(const char* multicast_iface_address, const char* const * addresses, size_t num_addresses, unsigned short port, const Options& options) {
   m_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
   m_groups.reserve(num_addresses);
@@ -62,9 +62,15 @@ TheSocket::TheSocket(const char* multicast_iface_address, const char* const * ad
     // assert_ok(setsockopt(m_sock, SOL_SOCKET, SO_RCVBUF, &value, sizeof(value)), "set rcvbuf");
 
     int value = 1;
-    ASSERT_OK_PERROR(setsockopt(m_sock, IPPROTO_IP, IP_MULTICAST_LOOP, &value, sizeof(value)), "disable loopback");
     ASSERT_OK_PERROR(setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value)), "enable reuseaddr");
     ASSERT_OK_PERROR(setsockopt(m_sock, SOL_SOCKET, SO_TIMESTAMPNS, &value, sizeof(value)), "enable rx timestamping");
+    if (options.enable_broadcast) {
+      ASSERT_OK_PERROR(setsockopt(m_sock, SOL_SOCKET, SO_BROADCAST, &value, sizeof(value)), "enable broadcast");
+    }
+    if (options.disable_loopback) {
+      value = 0;
+      ASSERT_OK_PERROR(setsockopt(m_sock, IPPROTO_IP, IP_MULTICAST_LOOP, &value, sizeof(value)), "disable loopback");
+    }
 
     value = SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_TX_SCHED;
     ASSERT_OK_PERROR(setsockopt(m_sock, SOL_SOCKET, SO_TIMESTAMPING, &value, sizeof(value)), "enable timestamping");

@@ -20,8 +20,13 @@ struct RxMessage {
   bool truncated = false;
 };
 
+struct Options {
+  bool enable_broadcast;
+  bool disable_loopback;
+};
+
 struct TheSocket {
-  TheSocket(const char* multicast_iface_address, const char* const * addresses, size_t num_addresses, unsigned short port);
+  TheSocket(const char* multicast_iface_address, const char* const * addresses, size_t num_addresses, unsigned short port, const Options& options);
 
   void send(size_t group, iovec part);
   void send(size_t group, iovec* parts, size_t num_parts);

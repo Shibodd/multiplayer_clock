@@ -30,7 +30,11 @@ int main(int argc, char* argv[]) {
   const char* const* ADDRESSES = argv + 4;
   const size_t NUM_ADDRESSES = argc - 4;
 
-  TheSocket sock("0.0.0.0", ADDRESSES, NUM_ADDRESSES, 7423);
+  Options sockopt {
+    .enable_broadcast = true,
+    .disable_loopback = true
+  };
+  TheSocket sock("0.0.0.0", ADDRESSES, NUM_ADDRESSES, 7423, sockopt);
 
   ClockOffsetCalculator::Filter::Params params;
   params.window_size = 110;
