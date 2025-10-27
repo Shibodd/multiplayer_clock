@@ -4,7 +4,7 @@
 #include <boost/circular_buffer.hpp>
 #include <clock_sync/utils/sample.hpp>
 
-namespace clock_sync {
+namespace clock_sync::utils {
 
 template <typename Timepoint, typename Value>
 struct MeasurementWindow {
@@ -63,6 +63,6 @@ private:
   buffer m_buffer;
 };
 
-} // namespace clock_sync
+} // namespace clock_sync::utils
 
 #endif // !CLOCKSYNC_MEASUREMENTWINDOW_HPP

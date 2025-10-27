@@ -4,7 +4,7 @@
 #include <optional>
 
 #include <clock_sync/utils/sample.hpp>
-#include <clock_sync/measurement_window.hpp>
+#include <clock_sync/utils/measurement_window.hpp>
 
 namespace clock_sync::utils {
 
